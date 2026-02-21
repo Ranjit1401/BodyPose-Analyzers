@@ -8,11 +8,11 @@ import SquatAnalyzer from "../SquatAnalyzer";
 export default function Workout() {
 
   const [searchParams] = useSearchParams();
-  const type = searchParams.get("type") || "running_in_place";
+  const type = (searchParams.get("type") || "running_in_place").toLowerCase();
 
   const videoRef = useRef(null);
 
-  /* ================= EXERCISE MAP (MOVE HERE) ================= */
+  /* ================= EXERCISE MAP ================= */
 
   const exerciseMap = {
     dumbbells: [
@@ -31,7 +31,7 @@ export default function Workout() {
       { label: "Wall Workout", file: "wall_workout.mp4" }
     ],
 
-    pushups: [
+    pushup: [
       { label: "Standard Pushups", file: "pushups.mp4" },
       { label: "Knee Pushups", file: "knee_pushups.mp4" }
     ],
@@ -63,8 +63,17 @@ export default function Workout() {
   const [caption, setCaption] = useState("Ready to start...");
   const [micActive, setMicActive] = useState(false);
 
-  // 🎥 Handle demo video looping
-  /* ================= VIDEO LOOP LOGIC ================= */
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [videoId, setVideoId] = useState("");
+
+  const extractVideoId = (url) => {
+    const regExp =
+      /(?:youtube\.com\/(?:.*v=|embed\/|v\/)|youtu\.be\/)([^#&?]*)/;
+    const match = url.match(regExp);
+    return match && match[1].length === 11 ? match[1] : null;
+  };
+
+  /* ================= VIDEO LOOP ================= */
 
   useEffect(() => {
     const video = videoRef.current;
@@ -83,38 +92,75 @@ export default function Workout() {
     };
 
     video.addEventListener("ended", handleEnded);
+    return () => video.removeEventListener("ended", handleEnded);
 
-    return () => {
-      video.removeEventListener("ended", handleEnded);
-    };
   }, [reps, speed, completedReps]);
-
-  // 🎤 Mic toggle
-  /* ================= RESET WHEN VARIATION CHANGES ================= */
 
   useEffect(() => {
     setCompletedReps(0);
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0;
-    }
+    if (videoRef.current) videoRef.current.currentTime = 0;
   }, [variationIndex]);
 
-  /* ================= MIC ================= */
+  /* ================= YOUTUBE IMPORT ================= */
 
-  const toggleMic = () => {
-    setMicActive(!micActive);
-    setCaption(
-      !micActive
-        ? "Listening... Say 'start workout'"
-        : "Mic turned off"
+  if (type === "import") {
+    return (
+      <div className="workout-wrapper">
+        {!videoId ? (
+          <div className="setup-card">
+            <h2>Import Exercise From YouTube</h2>
+
+            <input
+              type="text"
+              placeholder="Paste YouTube URL"
+              value={youtubeUrl}
+              onChange={(e) => setYoutubeUrl(e.target.value)}
+              className="youtube-input"
+            />
+
+            <button
+              className="primary-btn"
+              onClick={() => {
+                const id = extractVideoId(youtubeUrl);
+                if (id) setVideoId(id);
+                else alert("Invalid YouTube URL");
+              }}
+            >
+              Load Video
+            </button>
+          </div>
+        ) : (
+          <div className="workout-grid">
+            <div className="camera-section">
+              <SquatAnalyzer />
+            </div>
+
+            <div className="video-section">
+              <iframe
+                width="100%"
+                height="100%"
+                src={`https://www.youtube.com/embed/${videoId}`}
+                title="YouTube player"
+                allowFullScreen
+                className="exercise-video"
+              />
+            </div>
+          </div>
+        )}
+      </div>
     );
-  };
+  }
 
-  /* ================= VIDEO SOURCE ================= */
+  /* ================= NORMAL VIDEO SOURCE ================= */
 
   const videoSrc = exerciseMap[type]
     ? `/videos/${type}/${exerciseMap[type][variationIndex].file}`
     : `/videos/${type}.mp4`;
+
+  const toggleMic = () => {
+    setMicActive(!micActive);
+    setCaption(!micActive ? "Listening..." : "Mic turned off");
+  };
 
   return (
     <div className="workout-wrapper">
@@ -125,12 +171,10 @@ export default function Workout() {
 
       <div className="workout-grid">
 
-        {/* AI CAMERA SECTION */}
         <div className="camera-section">
           <SquatAnalyzer />
         </div>
 
-        {/* DEMO VIDEO */}
         <div className="video-section">
           <video
             ref={videoRef}
@@ -151,9 +195,7 @@ export default function Workout() {
               Variation
               <select
                 value={variationIndex}
-                onChange={(e) =>
-                  setVariationIndex(Number(e.target.value))
-                }
+                onChange={(e) => setVariationIndex(Number(e.target.value))}
               >
                 {exerciseMap[type].map((item, index) => (
                   <option key={index} value={index}>
