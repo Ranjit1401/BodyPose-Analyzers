@@ -9,7 +9,6 @@ import planks from "../assets/exercises/planks.png";
 import pilates from "../assets/exercises/pliates.png";
 import pushup from "../assets/exercises/pushup.png";
 import resistanceBand from "../assets/exercises/resistance_band.png";
-import runningInPlace from "../assets/exercises/running_in_place.png";
 import squats from "../assets/exercises/squats.png";
 import steps from "../assets/exercises/steps.png";
 import yoga from "../assets/exercises/yoga.png";
@@ -26,7 +25,6 @@ export default function Menu() {
     { id: "pilates", title: "Pilates", image: pilates },
     { id: "pushup", title: "Pushups", image: pushup },
     { id: "resistance_band", title: "Resistance Band", image: resistanceBand },
-    { id: "running_in_place", title: "Running In Place", image: runningInPlace },
     { id: "squats", title: "Squats", image: squats },
     { id: "steps", title: "Steps", image: steps },
     { id: "yoga", title: "Yoga", image: yoga },

@@ -17,7 +17,7 @@ export default function Workout() {
   const exerciseMap = {
     dumbbells: [
       { label: "360 Rotation", file: "360.mp4" },
-      { label: "Dumbbell Lunge", file: "dumbbell_Lunge.mp4" },
+      { label: "Dumbbell Lunges", file: "Dumbbell_Lunge.mp4" },
       { label: "Glutes", file: "glutes.mp4" },
       { label: "Massive Arm", file: "massive_arm.mp4" }
     ],
