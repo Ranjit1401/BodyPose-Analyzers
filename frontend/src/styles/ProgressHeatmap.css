@@ -1,0 +1,61 @@
+.heatmap-wrapper {
+  overflow-x: auto;
+  padding: 20px 0;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(52, 14px);
+  grid-auto-rows: 14px;
+  gap: 4px;
+  min-width: 900px;
+}
+
+/* Heatmap cells */
+.heatmap-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  transition: 0.2s ease;
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.2);
+}
+
+/* Color Levels (AI Green Theme) */
+.level-0 {
+  background-color: #161b22;
+}
+
+.level-1 {
+  background-color: #0e4429;
+}
+
+.level-2 {
+  background-color: #006d32;
+}
+
+.level-3 {
+  background-color: #26a641;
+}
+
+.level-4 {
+  background-color: #39d353;
+}
+
+/* Legend */
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 15px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.legend-box {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}

@@ -1,0 +1,94 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;   /* VERY HIGH so nothing overlaps */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 🔥 TRUE GLASS CARD */
+.auth-card {
+  width: 400px;
+  max-width: 90%;
+  padding: 40px;
+  border-radius: 20px;
+
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(20px) !important;
+
+  border: 2px solid rgba(232, 213, 213, 0.7) !important;
+
+  color: white !important;
+
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  box-shadow: 0 0 40px rgba(255,255,255,0.1);
+}
+
+/* Inputs */
+.auth-card input {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255,255,255,0.7) !important;
+  background: transparent !important;
+  color: white !important;
+  outline: none;
+}
+
+.auth-card input::placeholder {
+  color: rgba(255,255,255,0.6);
+}
+
+/* Focus effect */
+.auth-card input:focus {
+  border: 2px solid white !important;
+}
+
+/* Buttons */
+.auth-btn {
+  padding: 12px;
+  border-radius: 30px;
+  background: transparent !important;
+  border: 1.5px solid white !important;
+  color: white !important;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.auth-btn:hover {
+  background: white !important;
+  color: black !important;
+}
+
+/* Text links */
+.forgot,
+.toggle-text span,
+.skip,
+.back-arrow {
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.forgot:hover,
+.toggle-text span:hover,
+.skip:hover,
+.back-arrow:hover {
+  opacity: 1;
+}
+
+.auth-error {
+  background: rgba(255, 0, 0, 0.1);
+  border: 1px solid rgba(255, 0, 0, 0.4);
+  color: #ff6b6b;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 14px;
+  text-align: center;
+}
+.spinner-border {
+  color: white !important;
+}

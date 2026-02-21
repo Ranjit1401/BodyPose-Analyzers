@@ -1,0 +1,41 @@
+/* ========================= */
+/* Global Reset */
+/* ========================= */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+/* ========================= */
+/* TRUE DARK BACKGROUND */
+/* ========================= */
+
+body {
+  font-family: Arial, sans-serif;
+  overflow-x: hidden;
+  color: white;
+
+  background:
+    radial-gradient(
+      circle at 30% 40%,
+      rgba(95, 70, 210, 0.859),
+      transparent 60%
+    ),
+    radial-gradient(
+      circle at 75% 75%,
+      rgba(9, 132, 151, 0.69),
+      transparent 60%
+    ),
+    black;   /* Almost black */
+}
+
+
+html {
+  scroll-behavior: smooth;
+}

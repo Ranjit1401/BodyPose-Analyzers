@@ -1,0 +1,110 @@
+.glass-navbar {
+  position: fixed;
+  top: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+
+  width: 90%;
+  max-width: 900px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 14px 30px;
+  border-radius: 40px;
+
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+
+  color: white;
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.08);
+}
+
+
+/* Logo */
+.glass-logo {
+  font-weight: 600;
+  font-size: 18px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.glass-logo:hover {
+  opacity: 0.8;
+}
+
+/* Nav links */
+.glass-links {
+  display: flex;
+  gap: 30px;
+  font-size: 15px;
+}
+
+.glass-links span {
+  cursor: pointer;
+  position: relative;
+  transition: 0.3s ease;
+}
+
+/* Hover effect underline */
+.glass-links span::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  width: 0%;
+  height: 2px;
+  background: white;
+  transition: 0.3s ease;
+}
+
+.glass-links span:hover::after {
+  width: 100%;
+}
+
+/* Profile icon */
+.glass-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.icon-btn:hover {
+  background: rgba(255,255,255,0.18);
+}
+
+
+.glass-profile:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+
+.glass-links a {
+  text-decoration: none;
+  color: white;
+  transition: 0.3s ease;
+}
+
+.glass-links a:hover {
+  color: #22c55e; /* neon green */
+}
+
+.active-link {
+  color: #22c55e !important;
+  font-weight: 600;
+}

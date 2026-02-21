@@ -1,0 +1,21 @@
+.layout-wrapper {
+  position: relative;
+  min-height: 100vh;
+  z-index: 0;
+}
+
+/* DotGrid Layer */
+.dotgrid-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;       /* Above mesh (-2), below content */
+  pointer-events: none;
+}
+
+/* Content Layer */
+.layout-content {
+  position: relative;
+  z-index: 1;
+  padding-top: 100px;   /* space for navbar */
+  min-height: 100vh;
+}

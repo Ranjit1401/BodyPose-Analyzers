@@ -1,0 +1,221 @@
+.home-wrapper {
+  position: relative;
+  min-height: 100vh;
+  padding: 140px 80px;
+  color: white;
+  overflow-x: hidden;
+}
+
+
+@keyframes floatMesh {
+  0% { transform: translateY(0px); }
+  100% { transform: translateY(-30px); }
+}
+
+/* ================= HEADER ================= */
+
+.landing-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #0b0c18;
+  z-index: 10;
+}
+
+.landing-header button {
+  padding: 10px 20px;
+  background: #5227ff;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+}
+
+/* ================= HERO ================= */
+
+.hero-section {
+  text-align: center;
+  margin-top: 120px;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-glow {
+  position: absolute;
+  width: 600px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(82,39,255,0.4), transparent);
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  filter: blur(100px);
+  z-index: -1;
+}
+
+.hero-title {
+  font-size: 54px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.cursor {
+  color: #39d353;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.hero-subtitle {
+  max-width: 600px;
+  margin: 0 auto 40px auto;
+  color: #aaa;
+}
+
+.primary-btn {
+  padding: 14px 30px;
+  background: #5227ff;
+  border-radius: 12px;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+/* ================= FEATURES ================= */
+
+.section-title {
+  text-align: center;
+  margin-bottom: 50px;
+  font-size: 32px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 40px;
+  margin-bottom: 120px;
+}
+
+.feature-card {
+  background: rgba(20, 10, 37, 0.8);
+  padding: 40px;
+  border-radius: 20px;
+  border: 1px solid rgba(132, 0, 255, 0.3);
+  transition: 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+}
+
+/* ================= FAQ ================= */
+
+.faq-section {
+  padding: 100px 0;
+}
+
+.faq-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.faq-item {
+  background: #121021;
+  margin-bottom: 20px;
+  padding: 25px 30px;
+  border-radius: 16px;
+  cursor: pointer;
+  border: 1px solid rgba(132, 0, 255, 0.2);
+}
+
+.faq-question {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.faq-answer {
+  margin-top: 15px;
+  color: #aaa;
+}
+
+/* ================= FOOTER ================= */
+
+.landing-footer {
+  background: #0b0c18;
+  padding: 80px;
+  margin-top: 120px;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  gap: 60px;
+  flex-wrap: wrap;
+}
+
+.footer-links {
+  display: flex;
+  gap: 80px;
+}
+
+.footer-bottom {
+  margin-top: 60px;
+  text-align: center;
+  color: #777;
+}
+
+/* ================= SCROLL FADE ================= */
+
+.fade-in {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: all 0.8s ease;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.footer-brand button {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #5227ff, #6b46ff);
+  border-radius: 25px;
+  border: none;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.footer-brand button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 20px rgba(82,39,255,0.6);
+}
+
+/* Social Icons */
+
+.footer-social {
+  margin-top: 50px;
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  font-size: 20px;
+}
+
+.footer-social svg {
+  cursor: pointer;
+  color: #aaa;
+  transition: 0.3s ease;
+}
+
+.footer-social svg:hover {
+  color: #39d353;
+  transform: translateY(-4px);
+}
