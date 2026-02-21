@@ -63,7 +63,9 @@ export default function Workout() {
   const [caption, setCaption] = useState("Ready to start...");
   const [micActive, setMicActive] = useState(false);
 
-  // 🎥 Handle video looping based on reps
+  // 🎥 Handle demo video looping
+  /* ================= VIDEO LOOP LOGIC ================= */
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -87,7 +89,18 @@ export default function Workout() {
     };
   }, [reps, speed, completedReps]);
 
-  // 🎤 Fake mic toggle
+  // 🎤 Mic toggle
+  /* ================= RESET WHEN VARIATION CHANGES ================= */
+
+  useEffect(() => {
+    setCompletedReps(0);
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+    }
+  }, [variationIndex]);
+
+  /* ================= MIC ================= */
+
   const toggleMic = () => {
     setMicActive(!micActive);
     setCaption(
@@ -112,12 +125,12 @@ export default function Workout() {
 
       <div className="workout-grid">
 
-        {/* CAMERA */}
+        {/* AI CAMERA SECTION */}
         <div className="camera-section">
           <SquatAnalyzer />
         </div>
 
-        {/* VIDEO */}
+        {/* DEMO VIDEO */}
         <div className="video-section">
           <video
             ref={videoRef}
