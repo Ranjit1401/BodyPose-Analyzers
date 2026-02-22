@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Pose } from "@mediapipe/pose";
+import { Pose, POSE_CONNECTIONS } from "@mediapipe/pose";
 import { Camera } from "@mediapipe/camera_utils";
-import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
+import { drawConnectors } from "@mediapipe/drawing_utils";
 
 function SquatAnalyzer() {
   const videoRef = useRef(null);
@@ -38,15 +38,10 @@ function SquatAnalyzer() {
       ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
 
       if (results.poseLandmarks) {
-        // Draw skeleton
-        drawConnectors(ctx, results.poseLandmarks, Pose.POSE_CONNECTIONS, {
+        // Draw only skeleton lines (no red dots)
+        drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, {
           color: "#00FF00",
           lineWidth: 4,
-        });
-
-        drawLandmarks(ctx, results.poseLandmarks, {
-          color: "#FF0000",
-          lineWidth: 2,
         });
 
         // Send landmarks to backend
