@@ -6,18 +6,75 @@ import "../styles/Workout.css";
 import SquatAnalyzer from "../SquatAnalyzer";
 
 export default function Workout() {
+
   const [searchParams] = useSearchParams();
-  const type = searchParams.get("type") || "squat";
+  const type = (searchParams.get("type") || "running_in_place").toLowerCase();
 
   const videoRef = useRef(null);
 
+  /* ================= EXERCISE MAP ================= */
+
+  const exerciseMap = {
+    dumbbells: [
+      { label: "360 Rotation", file: "360.mp4" },
+      { label: "Dumbbell Lunges", file: "Dumbbell_Lunge.mp4" },
+      { label: "Glutes", file: "glutes.mp4" },
+      { label: "Massive Arm", file: "massive_arm.mp4" }
+    ],
+
+    pilates: [
+      { label: "Bench Dips", file: "Bench_Dips.mp4" },
+      { label: "Bulgarian Split", file: "Bulgarian_Split.mp4" },
+      { label: "Goal Post", file: "Goal_post.mp4" },
+      { label: "Oblique Exercise", file: "Oblique_exercise.mp4" },
+      { label: "Crunches", file: "crunches.mp4" },
+      { label: "Wall Workout", file: "wall_workout.mp4" }
+    ],
+
+    pushup: [
+      { label: "Standard Pushups", file: "pushups.mp4" },
+      { label: "Knee Pushups", file: "knee_pushups.mp4" }
+    ],
+
+    resistance_band: [
+      { label: "Thighs", file: "Thighs.mp4" },
+      { label: "Side", file: "side.mp4" },
+      { label: "Upper Body", file: "upper.mp4" },
+      { label: "Upper Body 2", file: "upper2.mp4" }
+    ],
+
+    zumba: [
+      { label: "3 Min", file: "3min.mp4" },
+      { label: "4 Min Tabata", file: "4min_Tabata.mp4" },
+      { label: "Arm Slow Workout", file: "Arm_slow_workout.mp4" },
+      { label: "Beginner", file: "Begineer.mp4" },
+      { label: "Dura", file: "Dura.mp4" },
+      { label: "Fat Burning", file: "Fat_burning.mp4" },
+      { label: "Crazy", file: "crazy.mp4" }
+    ]
+  };
+
+  /* ================= STATES ================= */
+
+  const [variationIndex, setVariationIndex] = useState(0);
   const [reps, setReps] = useState(10);
   const [speed, setSpeed] = useState(1);
   const [completedReps, setCompletedReps] = useState(0);
   const [caption, setCaption] = useState("Ready to start...");
   const [micActive, setMicActive] = useState(false);
 
-  // 🎥 Handle demo video looping
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [videoId, setVideoId] = useState("");
+
+  const extractVideoId = (url) => {
+    const regExp =
+      /(?:youtube\.com\/(?:.*v=|embed\/|v\/)|youtu\.be\/)([^#&?]*)/;
+    const match = url.match(regExp);
+    return match && match[1].length === 11 ? match[1] : null;
+  };
+
+  /* ================= VIDEO LOOP ================= */
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -35,43 +92,93 @@ export default function Workout() {
     };
 
     video.addEventListener("ended", handleEnded);
+    return () => video.removeEventListener("ended", handleEnded);
 
-    return () => {
-      video.removeEventListener("ended", handleEnded);
-    };
   }, [reps, speed, completedReps]);
 
-  // 🎤 Mic toggle
+  useEffect(() => {
+    setCompletedReps(0);
+    if (videoRef.current) videoRef.current.currentTime = 0;
+  }, [variationIndex]);
+
+  /* ================= YOUTUBE IMPORT ================= */
+
+  if (type === "import") {
+    return (
+      <div className="workout-wrapper">
+        {!videoId ? (
+          <div className="setup-card">
+            <h2>Import Exercise From YouTube</h2>
+
+            <input
+              type="text"
+              placeholder="Paste YouTube URL"
+              value={youtubeUrl}
+              onChange={(e) => setYoutubeUrl(e.target.value)}
+              className="youtube-input"
+            />
+
+            <button
+              className="primary-btn"
+              onClick={() => {
+                const id = extractVideoId(youtubeUrl);
+                if (id) setVideoId(id);
+                else alert("Invalid YouTube URL");
+              }}
+            >
+              Load Video
+            </button>
+          </div>
+        ) : (
+          <div className="workout-grid">
+            <div className="camera-section">
+              <SquatAnalyzer />
+            </div>
+
+            <div className="video-section">
+              <iframe
+                width="100%"
+                height="100%"
+                src={`https://www.youtube.com/embed/${videoId}`}
+                title="YouTube player"
+                allowFullScreen
+                className="exercise-video"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ================= NORMAL VIDEO SOURCE ================= */
+
+  const videoSrc = exerciseMap[type]
+    ? `/videos/${type}/${exerciseMap[type][variationIndex].file}`
+    : `/videos/${type}.mp4`;
+
   const toggleMic = () => {
     setMicActive(!micActive);
-    setCaption(
-      !micActive
-        ? "Listening... Say 'start workout'"
-        : "Mic turned off"
-    );
+    setCaption(!micActive ? "Listening..." : "Mic turned off");
   };
 
   return (
     <div className="workout-wrapper">
 
-      {/* HEADER */}
       <div className="workout-header">
         {type.replaceAll("_", " ").toUpperCase()} SESSION
       </div>
 
-      {/* GRID */}
       <div className="workout-grid">
 
-        {/* AI CAMERA SECTION */}
         <div className="camera-section">
           <SquatAnalyzer />
         </div>
 
-        {/* DEMO VIDEO */}
         <div className="video-section">
           <video
             ref={videoRef}
-            src={`/videos/${type}.mp4`}
+            src={videoSrc}
             controls
             className="exercise-video"
           />
@@ -79,10 +186,26 @@ export default function Workout() {
 
       </div>
 
-      {/* CONTROLS */}
       <div className="controls-panel">
 
         <div className="controls-left">
+
+          {exerciseMap[type] && (
+            <label>
+              Variation
+              <select
+                value={variationIndex}
+                onChange={(e) => setVariationIndex(Number(e.target.value))}
+              >
+                {exerciseMap[type].map((item, index) => (
+                  <option key={index} value={index}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
           <label>
             Reps
             <input
@@ -108,6 +231,7 @@ export default function Workout() {
               <option value="2">2x</option>
             </select>
           </label>
+
         </div>
 
         <div className="controls-center">
