@@ -14,6 +14,14 @@ export default function Settings() {
     const [message, setMessage] = useState("");
     const [loading, setLoading] = useState(true);
 
+    // Initialize theme from localStorage on mount
+    useEffect(() => {
+        const savedTheme = localStorage.getItem("appTheme") || "dark";
+        setTheme(savedTheme);
+        document.documentElement.setAttribute("data-theme", savedTheme);
+        document.body.classList.toggle("light-mode", savedTheme === "light");
+    }, []);
+
     useEffect(() => {
         const fetchProfile = async () => {
             try {
@@ -48,7 +56,9 @@ export default function Settings() {
     const toggleTheme = () => {
         const newTheme = theme === "dark" ? "light" : "dark";
         setTheme(newTheme);
+        localStorage.setItem("appTheme", newTheme);
         document.documentElement.setAttribute("data-theme", newTheme);
+        document.body.classList.toggle("light-mode", newTheme === "light");
     };
 
     if (loading) {
@@ -118,7 +128,7 @@ export default function Settings() {
                             <div className={`toggle-track ${theme}`}>
                                 <div className="toggle-thumb" />
                             </div>
-                            <span>{theme === "dark" ? "Dark Mode" : "Light Mode"}</span>
+                            <span>{theme === "dark" ? "🌙 Dark Mode" : "☀️ Light Mode"}</span>
                         </div>
                     </div>
                 </section>
@@ -135,3 +145,4 @@ export default function Settings() {
         </div>
     );
 }
+

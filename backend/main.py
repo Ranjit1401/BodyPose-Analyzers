@@ -1,15 +1,52 @@
+from fastapi import FastAPI
+from pydantic import BaseModel
+import os
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_KEY = os.getenv("VIRTUALTRAINER_API_KEY")
+
+class CoachRequest(BaseModel):
+    message: str
+
+@app.post("/ai-coach")
+async def ai_coach(data: CoachRequest):
+    prompt = f"""
+You are a professional fitness trainer.
+Provide short coaching advice based on the user's question.
+
+User said:
+{data.message}
+"""
+    response = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json"
+        },
+        json={
+            "model": "openai/gpt-4o-mini",
+            "messages": [{"role": "user", "content": prompt}]
+        }
+    )
+    reply = response.json()["choices"][0]["message"]["content"]
+    return {"reply": reply}
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from jose import JWTError, jwt
 import os
+import requests
 from datetime import date, timedelta, datetime
 from fastapi import File, UploadFile
 import numpy as np
 import cv2
-from pose.detector import detect_landmarks
+from pose.detector import detect_landmarks, get_joint_landmarks
 import models
 import schemas
 from database import engine, SessionLocal
@@ -24,6 +61,8 @@ from auth import (
 from dotenv import load_dotenv
 from fastapi import Body
 from typing import List
+import tempfile
+import io
 
 # Load environment variables
 load_dotenv()
@@ -283,9 +322,35 @@ def save_workout(
 
     db.commit()
 
+    # Generate AI Feedback
+    ai_feedback = f"Great job on your {workout.exercise_name}! You achieved {workout.accuracy}% accuracy."
+    api_key = os.getenv("VIRTUALTRAINER_API_KEY") or os.environ.get("VIRTUALTRAINER_API_KEY")
+    if api_key:
+        try:
+            prompt = f"Act as a professional virtual personal trainer. You are giving short, encouraging post-workout feedback to {current_user.username}. They just completed {workout.reps} reps of {workout.exercise_name} with {workout.accuracy}% form accuracy, burning {workout.calories} calories. Give them 1-2 sentences of motivational and corrective advice. Be energetic."
+            response = requests.post(
+                url="https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "HTTP-Referer": "http://localhost:5173",
+                    "X-Title": "Virtual Trainer AI",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "google/gemini-2.5-flash-free",
+                    "messages": [{"role": "user", "content": prompt}]
+                },
+                timeout=5
+            )
+            if response.status_code == 200:
+                ai_feedback = response.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            print(f"AI Coach Error: {e}")
+
     return {
         "message": "Workout saved successfully",
-        "session_id": new_session.id
+        "session_id": new_session.id,
+        "coach_feedback": ai_feedback
     }
 
 # -------------------- Get Workout History --------------------
@@ -316,6 +381,47 @@ def get_workouts(
 
     return result
 
+# -------------------- AI Coach Feedback --------------------
+@app.post("/api/coach-feedback")
+def generate_coach_feedback(
+    workout_data: dict = Body(...),
+    current_user: models.User = Depends(get_current_user)
+):
+    api_key = os.getenv("VIRTUALTRAINER_API_KEY") or os.environ.get("VIRTUALTRAINER_API_KEY")
+    if not api_key:
+        # Fallback local hardcoded feedback if no key is provided
+        return {"feedback": f"Great job on your {workout_data.get('exercise', 'workout')}! You achieved {workout_data.get('accuracy', 0)}% accuracy. Keep pushing!"}
+
+    # OpenRouter API call example (can also adapt to Gemini REST)
+    try:
+        prompt = f"Act as a professional virtual personal trainer. You are giving short, encouraging post-workout feedback to {current_user.username}. They just completed {workout_data.get('reps', 0)} reps of {workout_data.get('exercise', 'exercise')} with {workout_data.get('accuracy', 0)}% form accuracy, burning {workout_data.get('calories', 0)} calories. Give them 2-3 sentences of motivational and corrective advice. Be energetic."
+        
+        response = requests.post(
+            url="https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "HTTP-Referer": "http://localhost:5173",
+                "X-Title": "Virtual Trainer AI",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "google/gemini-2.5-flash-free",
+                "messages": [
+                    {"role": "user", "content": prompt}
+                ]
+            },
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            ai_text = response.json()["choices"][0]["message"]["content"]
+            return {"feedback": ai_text}
+        else:
+            return {"feedback": f"Great job on your {workout_data.get('exercise', 'workout')}! Keep up the good work."}
+    except Exception as e:
+        print(f"AI Coach Error: {e}")
+        return {"feedback": "Awesome workout! Keep going strong tomorrow!"}
+
 # -------------------- Pose Analysis (Image Upload) --------------------
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
@@ -323,7 +429,7 @@ async def analyze(file: UploadFile = File(...)):
     np_arr = np.frombuffer(contents, np.uint8)
     image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-    joints = detect_landmarks(image)
+    joints = get_joint_landmarks(image)
 
     if joints is None:
         return {"status": "No body detected"}
@@ -334,6 +440,60 @@ async def analyze(file: UploadFile = File(...)):
         "status": "Body detected",
         "analysis": result
     }
+
+# -------------------- Text-to-Speech Feedback --------------------
+@app.post("/api/tts")
+async def text_to_speech(data: dict = Body(...)):
+    """
+    Convert text feedback to speech audio.
+    Request body: {"text": "string"}
+    Returns: WAV audio file or error
+    """
+    text = data.get("text", "").strip()
+    
+    if not text:
+        raise HTTPException(status_code=400, detail="Text is required")
+    
+    # Limit text length for safety
+    if len(text) > 500:
+        text = text[:500]
+    
+    try:
+        import pyttsx3
+        
+        # Initialize text-to-speech engine
+        engine = pyttsx3.init()
+        engine.setProperty('rate', 150)  # Speech rate
+        engine.setProperty('volume', 1.0)  # Volume (0-1)
+        
+        # Use temporary file with proper cleanup
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp:
+            temp_path = tmp.name
+        
+        try:
+            engine.save_to_file(text, temp_path)
+            engine.runAndWait()
+            
+            # Read the generated audio
+            with open(temp_path, 'rb') as audio_file:
+                audio_data = audio_file.read()
+            
+            return StreamingResponse(
+                io.BytesIO(audio_data),
+                media_type="audio/wav",
+                headers={"Content-Disposition": "attachment; filename=feedback.wav"}
+            )
+        finally:
+            # Clean up temp file
+            if os.path.exists(temp_path):
+                try:
+                    os.unlink(temp_path)
+                except:
+                    pass
+    except Exception as e:
+        print(f"TTS Error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate speech")
+
 
 # -------------------- Pose Analysis (Landmarks from Frontend) --------------------
 @app.post("/analyze-landmarks")
@@ -357,6 +517,7 @@ async def analyze_landmarks(data: dict = Body(...)):
     result = analyze_squat(joints)
 
     return {"analysis": result}
+
 
 # -------------------- Health Check --------------------
 @app.get("/health")

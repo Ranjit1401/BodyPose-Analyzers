@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
@@ -9,8 +10,14 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import ResetPassword from "./pages/ResetPassword";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { initializeTheme } from "./utils/themeUtils";
 
 function App() {
+  // Initialize theme on app load
+  useEffect(() => {
+    initializeTheme();
+  }, []);
+
   return (
     <>
       <Routes>

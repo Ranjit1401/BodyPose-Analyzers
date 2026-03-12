@@ -9,7 +9,6 @@ export default function Workout() {
 
   const [searchParams] = useSearchParams();
   const type = (searchParams.get("type") || "running_in_place").toLowerCase();
-
   const videoRef = useRef(null);
 
   /* ================= EXERCISE MAP ================= */
@@ -166,19 +165,55 @@ export default function Workout() {
     ? `/videos/${type}/${exerciseMap[type][variationIndex].file}`
     : `/videos/${type}.mp4`;
 
-  const toggleMic = async () => {
+  const [micActive, setMicActive] = useState(false);
+  const recognitionRef = useRef(null);
+
+  const handleAIResponse = (msg) => {
+    setCaption(msg);
+    const speech = new window.SpeechSynthesisUtterance(msg);
+    window.speechSynthesis.speak(speech);
+  };
+
+  const sendToBackend = async (transcript) => {
     try {
-      if (!micActive) {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        setMicActive(true);
-        setCaption("Listening...");
-      } else {
-        setMicActive(false);
-        setCaption("Mic turned off");
-      }
+      const res = await fetch("http://localhost:8000/ai-coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: transcript })
+      });
+      const data = await res.json();
+      if (data.reply) handleAIResponse(data.reply);
     } catch (err) {
-      console.error("Mic access denied", err);
-      setCaption("Mic permission denied");
+      setCaption("AI error");
+    }
+  };
+
+  const toggleMic = () => {
+    if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
+      setCaption("Speech recognition not supported");
+      return;
+    }
+    if (!micActive) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.onresult = (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript;
+        setCaption(`You said: ${transcript}`);
+        sendToBackend(transcript);
+      };
+      recognition.onend = () => setMicActive(false);
+      recognition.onerror = () => setCaption("Mic error");
+      recognitionRef.current = recognition;
+      recognition.start();
+      setMicActive(true);
+      setCaption("Listening...");
+    } else {
+      recognitionRef.current?.stop();
+      setMicActive(false);
+      setCaption("Mic turned off");
     }
   };
 

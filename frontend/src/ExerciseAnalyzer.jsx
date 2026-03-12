@@ -14,6 +14,8 @@ function ExerciseAnalyzer({ exerciseName = "Squats", type = "squats" }) {
 
     const [reps, setReps] = useState(0);
     const [feedback, setFeedback] = useState("Initializing model...");
+    const lastSpokenMessage = useRef("");
+    const lastSpeakTime = useRef(0);
     const [stage, setStage] = useState("UP");
     const [score, setScore] = useState(100);
     const [fps, setFps] = useState(0);
@@ -22,6 +24,22 @@ function ExerciseAnalyzer({ exerciseName = "Squats", type = "squats" }) {
 
     // Real-time metrics
     const [metrics, setMetrics] = useState({});
+
+    const prevAngles = useRef({});
+
+    const smoothAngle = (key, rawAngle, alpha = 0.5) => {
+        if (!prevAngles.current[key]) {
+            prevAngles.current[key] = rawAngle;
+            return rawAngle;
+        }
+        const smoothed = alpha * rawAngle + (1 - alpha) * prevAngles.current[key];
+        prevAngles.current[key] = smoothed;
+        return smoothed;
+    };
+
+    const isVisible = (landmarks) => {
+        return landmarks.every(lm => lm && lm.visibility > 0.65);
+    };
 
     const calculateAngle = (a, b, c) => {
         const radians =
@@ -94,145 +112,199 @@ function ExerciseAnalyzer({ exerciseName = "Squats", type = "squats" }) {
 
             // SQUATS
             if (lowerType.includes("squat") || lowerType.includes("glutes") || lowerType.includes("thighs")) {
-                const leftKneeAngle = calculateAngle(leftHip, leftKnee, leftAnkle);
-                const rightKneeAngle = calculateAngle(rightHip, rightKnee, rightAnkle);
-                const backAngle = calculateAngle(leftShoulder, leftHip, leftAnkle);
-                const avgAngle = (leftKneeAngle + rightKneeAngle) / 2;
-
-                newMetrics = { "Knee Angle": `${Math.round(avgAngle)}°` };
-
-                if (Math.abs(leftHip.x - rightHip.x) > 0.1) {
-                    message = "Turn Sideways";
+                if (!isVisible([leftHip, leftKnee, leftAnkle, rightHip, rightKnee, rightAnkle])) {
+                    message = "Adjust camera! Joints obstructed ⚠️";
                     isCorrect = false;
-                } else if (backAngle < 150) {
-                    message = "Keep Back Straight 🔙";
-                    isCorrect = false;
-                } else if (Math.abs(leftKneeAngle - rightKneeAngle) > 20) {
-                    message = "Balance your weight ⚖️";
-                    isCorrect = false;
-                }
+                } else {
+                    const leftKneeAngle = smoothAngle('leftKnee', calculateAngle(leftHip, leftKnee, leftAnkle));
+                    const rightKneeAngle = smoothAngle('rightKnee', calculateAngle(rightHip, rightKnee, rightAnkle));
+                    const backAngle = smoothAngle('backAngle', calculateAngle(leftShoulder, leftHip, leftAnkle));
+                    const avgAngle = (leftKneeAngle + rightKneeAngle) / 2;
 
-                if (avgAngle < 90 && poseState.current === "UP") {
-                    poseState.current = "DOWN";
-                    setStage("DOWN");
-                    message = "Great Depth! 🔥";
-                } else if (avgAngle > 160 && poseState.current === "DOWN") {
-                    currentReps++;
-                    setReps(currentReps);
-                    poseState.current = "UP";
-                    setStage("UP");
-                } else if (avgAngle < 130 && poseState.current === "UP") {
-                    message = "Go Lower ⬇️";
+                    newMetrics = { "Knee Angle": `${Math.round(avgAngle)}°` };
+
+                    if (Math.abs(leftHip.x - rightHip.x) > 0.1) {
+                        message = "Turn Sideways";
+                        isCorrect = false;
+                    } else if (backAngle < 150) {
+                        message = "Keep Back Straight 🔙";
+                        isCorrect = false;
+                    } else if (Math.abs(leftKneeAngle - rightKneeAngle) > 20) {
+                        message = "Balance your weight ⚖️";
+                        isCorrect = false;
+                    }
+
+                    if (avgAngle < 90 && poseState.current === "UP") {
+                        poseState.current = "DOWN";
+                        setStage("DOWN");
+                        message = "Great Depth! 🔥";
+                    } else if (avgAngle > 160 && poseState.current === "DOWN") {
+                        currentReps++;
+                        setReps(currentReps);
+                        poseState.current = "UP";
+                        setStage("UP");
+                    } else if (avgAngle < 130 && poseState.current === "UP") {
+                        message = "Go Lower ⬇️";
+                    }
                 }
             }
 
             // PUSHUPS / DIPS / CRUNCHES / ARM
             else if (lowerType.includes("pushup") || lowerType.includes("dips") || lowerType.includes("arm") || lowerType.includes("upper")) {
-                const leftElbowAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
-                const rightElbowAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
-                const avgElbow = (leftElbowAngle + rightElbowAngle) / 2;
+                if (!isVisible([leftShoulder, leftElbow, leftWrist, rightShoulder, rightElbow, rightWrist])) {
+                    message = "Adjust camera! Arms obstructed ⚠️";
+                    isCorrect = false;
+                } else {
+                    const leftElbowAngle = smoothAngle('leftElbow', calculateAngle(leftShoulder, leftElbow, leftWrist));
+                    const rightElbowAngle = smoothAngle('rightElbow', calculateAngle(rightShoulder, rightElbow, rightWrist));
+                    const avgElbow = (leftElbowAngle + rightElbowAngle) / 2;
 
-                newMetrics = { "Elbow Angle": `${Math.round(avgElbow)}°` };
+                    newMetrics = { "Elbow Angle": `${Math.round(avgElbow)}°` };
 
-                if (avgElbow < 90 && poseState.current === "UP") {
-                    poseState.current = "DOWN";
-                    setStage("DOWN");
-                } else if (avgElbow > 155 && poseState.current === "DOWN") {
-                    currentReps++;
-                    setReps(currentReps);
-                    poseState.current = "UP";
-                    setStage("UP");
-                } else if (avgElbow < 130 && poseState.current === "UP") {
-                    message = "Go Lower ⬇️";
+                    if (avgElbow < 90 && poseState.current === "UP") {
+                        poseState.current = "DOWN";
+                        setStage("DOWN");
+                    } else if (avgElbow > 155 && poseState.current === "DOWN") {
+                        currentReps++;
+                        setReps(currentReps);
+                        poseState.current = "UP";
+                        setStage("UP");
+                    } else if (avgElbow < 130 && poseState.current === "UP") {
+                        message = "Go Lower ⬇️";
+                    }
                 }
             }
 
             // LUNGES / SPLIT
             else if (lowerType.includes("lunge") || lowerType.includes("split")) {
-                const leftKneeAngle = calculateAngle(leftHip, leftKnee, leftAnkle);
-                const rightKneeAngle = calculateAngle(rightHip, rightKnee, rightAnkle);
+                if (!isVisible([leftHip, leftKnee, leftAnkle, rightHip, rightKnee, rightAnkle])) {
+                    message = "Adjust camera! Legs obstructed ⚠️";
+                    isCorrect = false;
+                } else {
+                    const leftKneeAngle = smoothAngle('leftKnee', calculateAngle(leftHip, leftKnee, leftAnkle));
+                    const rightKneeAngle = smoothAngle('rightKnee', calculateAngle(rightHip, rightKnee, rightAnkle));
 
-                newMetrics = {
-                    "L Knee": `${Math.round(leftKneeAngle)}°`,
-                    "R Knee": `${Math.round(rightKneeAngle)}°`
-                };
+                    newMetrics = {
+                        "L Knee": `${Math.round(leftKneeAngle)}°`,
+                        "R Knee": `${Math.round(rightKneeAngle)}°`
+                    };
 
-                if ((leftKneeAngle < 100 || rightKneeAngle < 100) && poseState.current === "UP") {
-                    poseState.current = "DOWN";
-                    setStage("DOWN");
-                } else if (leftKneeAngle > 160 && rightKneeAngle > 160 && poseState.current === "DOWN") {
-                    currentReps++;
-                    setReps(currentReps);
-                    poseState.current = "UP";
-                    setStage("UP");
+                    if ((leftKneeAngle < 100 || rightKneeAngle < 100) && poseState.current === "UP") {
+                        poseState.current = "DOWN";
+                        setStage("DOWN");
+                    } else if (leftKneeAngle > 160 && rightKneeAngle > 160 && poseState.current === "DOWN") {
+                        currentReps++;
+                        setReps(currentReps);
+                        poseState.current = "UP";
+                        setStage("UP");
+                    }
                 }
             }
 
             // PILATES (detect hip angle)
             else if (lowerType.includes("pilates")) {
-                const leftHipAngle = calculateAngle(leftShoulder, leftHip, leftKnee);
-                newMetrics = { "Hip Angle": `${Math.round(leftHipAngle)}°` };
+                if (!isVisible([leftShoulder, leftHip, leftKnee])) {
+                    message = "Adjust camera! Torso obstructed ⚠️";
+                    isCorrect = false;
+                } else {
+                    const leftHipAngle = smoothAngle('leftHip', calculateAngle(leftShoulder, leftHip, leftKnee));
+                    newMetrics = { "Hip Angle": `${Math.round(leftHipAngle)}°` };
 
-                if (leftHipAngle < 90 && poseState.current === "UP") {
-                    poseState.current = "DOWN";
-                    setStage("DOWN");
-                } else if (leftHipAngle > 160 && poseState.current === "DOWN") {
-                    currentReps++;
-                    setReps(currentReps);
-                    poseState.current = "UP";
-                    setStage("UP");
+                    if (leftHipAngle < 90 && poseState.current === "UP") {
+                        poseState.current = "DOWN";
+                        setStage("DOWN");
+                    } else if (leftHipAngle > 160 && poseState.current === "DOWN") {
+                        currentReps++;
+                        setReps(currentReps);
+                        poseState.current = "UP";
+                        setStage("UP");
+                    }
                 }
             }
 
             // DUMBBELLS (detect shoulder movement)
             else if (lowerType.includes("dumbbell")) {
-                const leftShoulderAngle = calculateAngle(leftHip, leftShoulder, leftElbow);
-                newMetrics = { "Shoulder Angle": `${Math.round(leftShoulderAngle)}°` };
+                if (!isVisible([leftHip, leftShoulder, leftElbow])) {
+                    message = "Adjust camera! Shoulders obstructed ⚠️";
+                    isCorrect = false;
+                } else {
+                    const leftShoulderAngle = smoothAngle('leftShoulderDumbbell', calculateAngle(leftHip, leftShoulder, leftElbow));
+                    newMetrics = { "Shoulder Angle": `${Math.round(leftShoulderAngle)}°` };
 
-                if (leftShoulderAngle > 140 && poseState.current === "UP") {
-                    poseState.current = "DOWN";
-                    setStage("DOWN");
-                } else if (leftShoulderAngle < 90 && poseState.current === "DOWN") {
-                    currentReps++;
-                    setReps(currentReps);
-                    poseState.current = "UP";
-                    setStage("UP");
+                    if (leftShoulderAngle > 140 && poseState.current === "UP") {
+                        poseState.current = "DOWN";
+                        setStage("DOWN");
+                    } else if (leftShoulderAngle < 90 && poseState.current === "DOWN") {
+                        currentReps++;
+                        setReps(currentReps);
+                        poseState.current = "UP";
+                        setStage("UP");
+                    }
                 }
             }
 
             // JUMPING JACKS / ZUMBA / CARDIO / RESISTANCE BAND
             else if (lowerType.includes("jack") || lowerType.includes("zumba") || lowerType.includes("cardio") || lowerType.includes("fat") || lowerType.includes("resistance")) {
-                const armDist = calculateDistance(leftWrist, rightWrist);
-                const legDist = calculateDistance(leftAnkle, rightAnkle);
+                if (!isVisible([leftWrist, rightWrist, leftAnkle, rightAnkle])) {
+                    message = "Adjust camera! Limbs obstructed ⚠️";
+                    isCorrect = false;
+                } else {
+                    const armDist = calculateDistance(leftWrist, rightWrist);
+                    const legDist = calculateDistance(leftAnkle, rightAnkle);
 
-                if (armDist < 0.3 && legDist < 0.2 && poseState.current === "UP") {
-                    poseState.current = "DOWN";
-                    setStage("DOWN");
-                } else if (armDist > 0.6 && legDist > 0.4 && poseState.current === "DOWN") {
-                    currentReps++;
-                    setReps(currentReps);
-                    poseState.current = "UP";
-                    setStage("UP");
+                    if (armDist < 0.3 && legDist < 0.2 && poseState.current === "UP") {
+                        poseState.current = "DOWN";
+                        setStage("DOWN");
+                    } else if (armDist > 0.6 && legDist > 0.4 && poseState.current === "DOWN") {
+                        currentReps++;
+                        setReps(currentReps);
+                        poseState.current = "UP";
+                        setStage("UP");
+                    }
                 }
             }
 
             // DEFAULT (Fallback to Elbow)
             else {
-                const leftElbowAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
-                if (leftElbowAngle < 60 && poseState.current === "UP") {
-                    poseState.current = "DOWN";
-                    setStage("DOWN");
-                } else if (leftElbowAngle > 150 && poseState.current === "DOWN") {
-                    currentReps++;
-                    setReps(currentReps);
-                    poseState.current = "UP";
-                    setStage("UP");
+                if (!isVisible([leftShoulder, leftElbow, leftWrist])) {
+                    message = "Adjust camera! Arm obstructed ⚠️";
+                    isCorrect = false;
+                } else {
+                    const leftElbowAngle = smoothAngle('leftElbow', calculateAngle(leftShoulder, leftElbow, leftWrist));
+                    if (leftElbowAngle < 60 && poseState.current === "UP") {
+                        poseState.current = "DOWN";
+                        setStage("DOWN");
+                    } else if (leftElbowAngle > 150 && poseState.current === "DOWN") {
+                        currentReps++;
+                        setReps(currentReps);
+                        poseState.current = "UP";
+                        setStage("UP");
+                    }
                 }
             }
 
             setScore(Math.max(0, formScore));
             setFeedback(message);
             setMetrics(newMetrics);
+
+            // Text-to-Speech Guidance
+            const nowTime = performance.now();
+            if (
+                message !== "Good Form ✅" &&
+                message !== "Great Depth! 🔥" &&
+                message !== lastSpokenMessage.current &&
+                nowTime - lastSpeakTime.current > 3000
+            ) {
+                const speech = new SpeechSynthesisUtterance(message.replace(/[^\w\s']/gi, ''));
+                speech.rate = 1.1;
+                speech.pitch = 1;
+                window.speechSynthesis.speak(speech);
+
+                lastSpokenMessage.current = message;
+                lastSpeakTime.current = nowTime;
+            } else if (message === "Good Form ✅") {
+                lastSpokenMessage.current = message;
+            }
 
             drawConnectors(ctx, lm, POSE_CONNECTIONS, {
                 color: isCorrect ? "#00ff88" : "#ff3c3c",
@@ -248,13 +320,25 @@ function ExerciseAnalyzer({ exerciseName = "Squats", type = "squats" }) {
 
         const camera = new Camera(videoRef.current, {
             onFrame: async () => {
-                await pose.send({ image: videoRef.current });
+                if (videoRef.current && videoRef.current.videoWidth > 0) {
+                    await pose.send({ image: videoRef.current });
+                }
             },
             width: 640,
             height: 480,
         });
 
         camera.start();
+
+        return () => {
+            if (camera) {
+                camera.stop();
+            }
+            if (pose) {
+                pose.close();
+            }
+            window.speechSynthesis.cancel();
+        };
     }, [type]);
 
     const handleSaveWorkout = async () => {
@@ -269,7 +353,7 @@ function ExerciseAnalyzer({ exerciseName = "Squats", type = "squats" }) {
         const estimatedCalories = Math.round(reps * 7 + (durationSec / 60) * 5); // Base cal computation
 
         try {
-            await saveWorkout({
+            const res = await saveWorkout({
                 exercise_name: exerciseName,
                 reps: reps,
                 duration: durationSec,
@@ -277,7 +361,14 @@ function ExerciseAnalyzer({ exerciseName = "Squats", type = "squats" }) {
                 calories: estimatedCalories,
             });
             setSaved(true);
-            setFeedback("Workout Saved! ✅");
+            setFeedback(res.data?.coach_feedback || "Workout Saved! ✅");
+
+            // Speak the coach feedback
+            if (res.data?.coach_feedback) {
+                const speech = new SpeechSynthesisUtterance(res.data.coach_feedback.replace(/[^\w\s']/gi, ''));
+                speech.rate = 1.05;
+                window.speechSynthesis.speak(speech);
+            }
         } catch (error) {
             console.error("Failed to save workout:", error);
             setFeedback("Save failed ❌");
@@ -302,7 +393,7 @@ function ExerciseAnalyzer({ exerciseName = "Squats", type = "squats" }) {
                 ))}
 
                 <p>Form: <strong>{score}%</strong></p>
-                <div className={score > 70 ? "good" : "bad"}>
+                <div className={score > 70 ? "good" : "bad"} style={saved ? { fontSize: "1rem", lineHeight: "1.4", padding: "10px", backgroundColor: "rgba(0,0,0,0.6)", borderRadius: "8px" } : {}}>
                     {feedback}
                 </div>
 
@@ -317,7 +408,7 @@ function ExerciseAnalyzer({ exerciseName = "Squats", type = "squats" }) {
                 )}
 
                 {saved && (
-                    <div className="saved-badge">✅ Saved Session!</div>
+                    <div className="saved-badge">✅ Session Complete</div>
                 )}
             </div>
         </div>
