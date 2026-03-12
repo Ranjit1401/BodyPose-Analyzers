@@ -61,7 +61,6 @@ export default function Workout() {
   const [completedReps, setCompletedReps] = useState(0);
   const [caption, setCaption] = useState("Ready to start...");
   const [micActive, setMicActive] = useState(false);
-
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [videoId, setVideoId] = useState("");
 
@@ -165,7 +164,7 @@ export default function Workout() {
     ? `/videos/${type}/${exerciseMap[type][variationIndex].file}`
     : `/videos/${type}.mp4`;
 
-  const [micActive, setMicActive] = useState(false);
+
   const recognitionRef = useRef(null);
 
   const handleAIResponse = (msg) => {
