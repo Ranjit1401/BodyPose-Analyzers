@@ -166,9 +166,20 @@ export default function Workout() {
     ? `/videos/${type}/${exerciseMap[type][variationIndex].file}`
     : `/videos/${type}.mp4`;
 
-  const toggleMic = () => {
-    setMicActive(!micActive);
-    setCaption(!micActive ? "Listening..." : "Mic turned off");
+  const toggleMic = async () => {
+    try {
+      if (!micActive) {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        setMicActive(true);
+        setCaption("Listening...");
+      } else {
+        setMicActive(false);
+        setCaption("Mic turned off");
+      }
+    } catch (err) {
+      console.error("Mic access denied", err);
+      setCaption("Mic permission denied");
+    }
   };
 
   return (

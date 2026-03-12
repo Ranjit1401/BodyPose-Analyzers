@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Pose, POSE_CONNECTIONS } from "@mediapipe/pose";
 import { Camera } from "@mediapipe/camera_utils";
-import { drawConnectors } from "@mediapipe/drawing_utils";
+import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
 import { saveWorkout } from "./services/api";
 
 function ExerciseAnalyzer({ exerciseName = "Squats", type = "squats" }) {
@@ -112,18 +112,16 @@ function ExerciseAnalyzer({ exerciseName = "Squats", type = "squats" }) {
                     isCorrect = false;
                 }
 
-                if (avgAngle > 160) {
-                    if (poseState.current === "DOWN") {
-                        currentReps++;
-                        setReps(currentReps);
-                    }
-                    poseState.current = "UP";
-                    setStage("UP");
-                } else if (avgAngle < 100) {
+                if (avgAngle < 90 && poseState.current === "UP") {
                     poseState.current = "DOWN";
                     setStage("DOWN");
-                    if (avgAngle < 90) message = "Great Depth! 🔥";
-                } else if (avgAngle < 130 && poseState.current === "DOWN") {
+                    message = "Great Depth! 🔥";
+                } else if (avgAngle > 160 && poseState.current === "DOWN") {
+                    currentReps++;
+                    setReps(currentReps);
+                    poseState.current = "UP";
+                    setStage("UP");
+                } else if (avgAngle < 130 && poseState.current === "UP") {
                     message = "Go Lower ⬇️";
                 }
             }
@@ -136,17 +134,15 @@ function ExerciseAnalyzer({ exerciseName = "Squats", type = "squats" }) {
 
                 newMetrics = { "Elbow Angle": `${Math.round(avgElbow)}°` };
 
-                if (avgElbow > 155) {
-                    if (poseState.current === "DOWN") {
-                        currentReps++;
-                        setReps(currentReps);
-                    }
-                    poseState.current = "UP";
-                    setStage("UP");
-                } else if (avgElbow < 90) {
+                if (avgElbow < 90 && poseState.current === "UP") {
                     poseState.current = "DOWN";
                     setStage("DOWN");
-                } else if (avgElbow < 130 && poseState.current === "DOWN") {
+                } else if (avgElbow > 155 && poseState.current === "DOWN") {
+                    currentReps++;
+                    setReps(currentReps);
+                    poseState.current = "UP";
+                    setStage("UP");
+                } else if (avgElbow < 130 && poseState.current === "UP") {
                     message = "Go Lower ⬇️";
                 }
             }
@@ -161,48 +157,76 @@ function ExerciseAnalyzer({ exerciseName = "Squats", type = "squats" }) {
                     "R Knee": `${Math.round(rightKneeAngle)}°`
                 };
 
-                if (leftKneeAngle > 160 && rightKneeAngle > 160) {
-                    if (poseState.current === "DOWN") {
-                        currentReps++;
-                        setReps(currentReps);
-                    }
-                    poseState.current = "UP";
-                    setStage("UP");
-                } else if (leftKneeAngle < 100 || rightKneeAngle < 100) {
+                if ((leftKneeAngle < 100 || rightKneeAngle < 100) && poseState.current === "UP") {
                     poseState.current = "DOWN";
                     setStage("DOWN");
+                } else if (leftKneeAngle > 160 && rightKneeAngle > 160 && poseState.current === "DOWN") {
+                    currentReps++;
+                    setReps(currentReps);
+                    poseState.current = "UP";
+                    setStage("UP");
                 }
             }
 
-            // JUMPING JACKS / ZUMBA / CARDIO
-            else if (lowerType.includes("jack") || lowerType.includes("zumba") || lowerType.includes("cardio") || lowerType.includes("fat")) {
+            // PILATES (detect hip angle)
+            else if (lowerType.includes("pilates")) {
+                const leftHipAngle = calculateAngle(leftShoulder, leftHip, leftKnee);
+                newMetrics = { "Hip Angle": `${Math.round(leftHipAngle)}°` };
+
+                if (leftHipAngle < 90 && poseState.current === "UP") {
+                    poseState.current = "DOWN";
+                    setStage("DOWN");
+                } else if (leftHipAngle > 160 && poseState.current === "DOWN") {
+                    currentReps++;
+                    setReps(currentReps);
+                    poseState.current = "UP";
+                    setStage("UP");
+                }
+            }
+
+            // DUMBBELLS (detect shoulder movement)
+            else if (lowerType.includes("dumbbell")) {
+                const leftShoulderAngle = calculateAngle(leftHip, leftShoulder, leftElbow);
+                newMetrics = { "Shoulder Angle": `${Math.round(leftShoulderAngle)}°` };
+
+                if (leftShoulderAngle > 140 && poseState.current === "UP") {
+                    poseState.current = "DOWN";
+                    setStage("DOWN");
+                } else if (leftShoulderAngle < 90 && poseState.current === "DOWN") {
+                    currentReps++;
+                    setReps(currentReps);
+                    poseState.current = "UP";
+                    setStage("UP");
+                }
+            }
+
+            // JUMPING JACKS / ZUMBA / CARDIO / RESISTANCE BAND
+            else if (lowerType.includes("jack") || lowerType.includes("zumba") || lowerType.includes("cardio") || lowerType.includes("fat") || lowerType.includes("resistance")) {
                 const armDist = calculateDistance(leftWrist, rightWrist);
                 const legDist = calculateDistance(leftAnkle, rightAnkle);
 
-                if (armDist < 0.3 && legDist < 0.2) {
+                if (armDist < 0.3 && legDist < 0.2 && poseState.current === "UP") {
                     poseState.current = "DOWN";
                     setStage("DOWN");
                 } else if (armDist > 0.6 && legDist > 0.4 && poseState.current === "DOWN") {
-                    poseState.current = "UP";
-                    setStage("UP");
                     currentReps++;
                     setReps(currentReps);
+                    poseState.current = "UP";
+                    setStage("UP");
                 }
             }
 
-            // DEFAULT (Bicep curls / unknown)
+            // DEFAULT (Fallback to Elbow)
             else {
                 const leftElbowAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
-                if (leftElbowAngle > 150) {
-                    if (poseState.current === "DOWN") {
-                        currentReps++;
-                        setReps(currentReps);
-                    }
-                    poseState.current = "UP";
-                    setStage("UP");
-                } else if (leftElbowAngle < 60) {
+                if (leftElbowAngle < 60 && poseState.current === "UP") {
                     poseState.current = "DOWN";
                     setStage("DOWN");
+                } else if (leftElbowAngle > 150 && poseState.current === "DOWN") {
+                    currentReps++;
+                    setReps(currentReps);
+                    poseState.current = "UP";
+                    setStage("UP");
                 }
             }
 
@@ -213,6 +237,11 @@ function ExerciseAnalyzer({ exerciseName = "Squats", type = "squats" }) {
             drawConnectors(ctx, lm, POSE_CONNECTIONS, {
                 color: isCorrect ? "#00ff88" : "#ff3c3c",
                 lineWidth: 5,
+            });
+            drawLandmarks(ctx, lm, {
+                color: "#ff0000",
+                lineWidth: 2,
+                radius: 3,
             });
 
         });
