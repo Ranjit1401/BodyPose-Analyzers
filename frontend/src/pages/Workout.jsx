@@ -8,12 +8,12 @@ import SquatAnalyzer from "../SquatAnalyzer";
 /* ================= POSE EXERCISES ================= */
 
 const POSE_EXERCISES = new Set([
-  "squats",
-  "pushup",
-  "pushups",
-  "planks",
-  "plank",
-  "burpees"
+"squats",
+"pushup",
+"pushups",
+"planks",
+"plank",
+"burpees"
 ]);
 
 /* ================= TEXT TO SPEECH ================= */
@@ -21,466 +21,473 @@ const POSE_EXERCISES = new Set([
 const lastSpokenRef = { text: "", time: 0 };
 
 function speakText(text, rate = 1) {
-  if (!window.speechSynthesis) return;
 
-  const now = Date.now();
+if (!window.speechSynthesis) return;
 
-  if (lastSpokenRef.text === text && now - lastSpokenRef.time < 5000) return;
+const now = Date.now();
 
-  lastSpokenRef.text = text;
-  lastSpokenRef.time = now;
+if (lastSpokenRef.text === text && now - lastSpokenRef.time < 4000) return;
 
-  window.speechSynthesis.cancel();
+lastSpokenRef.text = text;
+lastSpokenRef.time = now;
 
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.rate = rate;
-  utter.lang = "en-US";
+window.speechSynthesis.cancel();
 
-  window.speechSynthesis.speak(utter);
+const utter = new SpeechSynthesisUtterance(text);
+utter.rate = rate;
+utter.lang = "en-US";
+
+window.speechSynthesis.speak(utter);
+
 }
 
 /* ================= COMPONENT ================= */
 
 export default function Workout() {
 
-  const [searchParams] = useSearchParams();
-  const type = (searchParams.get("type") || "running_in_place").toLowerCase();
+const [searchParams] = useSearchParams();
+const type = (searchParams.get("type") || "running_in_place").toLowerCase();
 
-  const videoRef = useRef(null);
+const videoRef = useRef(null);
 
-  /* ================= STATES ================= */
+/* ================= STATES ================= */
 
-  const [variationIndex, setVariationIndex] = useState(0);
-  const [reps, setReps] = useState(5);
-  const [speed, setSpeed] = useState(1);
-  const [completedReps, setCompletedReps] = useState(0);
+const [variationIndex, setVariationIndex] = useState(0);
+const [reps, setReps] = useState(5);
+const [speed, setSpeed] = useState(1);
+const [completedReps, setCompletedReps] = useState(0);
 
-  const [micActive, setMicActive] = useState(false);
-  const [userSpeech, setUserSpeech] = useState("");
-  const [aiText, setAiText] = useState("Ready to start...");
-  const [isListening, setIsListening] = useState(false);
+const [micActive, setMicActive] = useState(false);
+const [userSpeech, setUserSpeech] = useState("");
+const [aiText, setAiText] = useState("Ready to start...");
+const [isListening, setIsListening] = useState(false);
 
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  const lastFeedbackRef = useRef("");
-  const poseRepCount = useRef(0);
+const lastFeedbackRef = useRef("");
+const poseRepCount = useRef(0);
 
-  /* prevent duplicate saves */
+const savedRef = useRef(false);
 
-  const savedRef = useRef(false);
+const recognitionRef = useRef(null);
+const shouldListenRef = useRef(false);
 
-  /* youtube import */
+/* ================= EXERCISE MAP ================= */
 
-  const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [videoId, setVideoId] = useState("");
+const exerciseMap = {
 
-  /* speech recognition */
+pushup: [
+  { label: "Standard Pushups", file: "pushups.mp4" },
+  { label: "Knee Pushups", file: "knee_pushups.mp4" }
+],
 
-  const recognitionRef = useRef(null);
-  const shouldListenRef = useRef(false);
+pilates: [
+  { label: "Crunches", file: "crunches.mp4" },
+  { label: "Wall Workout", file: "wall_workout.mp4" }
+]
 
-  /* ================= EXERCISE MAP ================= */
+};
 
-  const exerciseMap = {
+/* ================= FEEDBACK ================= */
 
-    pushup: [
-      { label: "Standard Pushups", file: "pushups.mp4" },
-      { label: "Knee Pushups", file: "knee_pushups.mp4" }
-    ],
+const handleFeedbackUpdate = useCallback((msg) => {
 
-    pilates: [
-      { label: "Crunches", file: "crunches.mp4" },
-      { label: "Wall Workout", file: "wall_workout.mp4" }
-    ]
+if (msg && msg !== lastFeedbackRef.current) {
 
-  };
+  lastFeedbackRef.current = msg;
+  setAiText(msg);
+  speakText(msg);
 
-  /* ================= FEEDBACK ================= */
+}
 
-  const handleFeedbackUpdate = useCallback((msg) => {
+}, []);
 
-    if (msg && msg !== lastFeedbackRef.current) {
+/* ================= SAVE SESSION ================= */
 
-      lastFeedbackRef.current = msg;
+const saveSession = useCallback(async (durationSec) => {
 
-      setAiText(msg);
+const token = localStorage.getItem("token");
 
-      speakText(msg);
+if (!token) {
 
-    }
+  console.warn("No token found");
+  return;
 
-  }, []);
+}
 
-  /* ================= REP COUNT ================= */
+const payload = {
 
-  const handleRepsUpdate = useCallback((count) => {
+  exercise: type,
+  reps: poseRepCount.current,
+  accuracy: 80,
+  duration: durationSec
 
-    poseRepCount.current = count;
+};
 
-    speakText(`Rep ${count} complete!`);
+console.log("Saving workout:", payload);
 
-    if (count >= reps && !savedRef.current) {
+try {
+
+  const res = await fetch("http://localhost:8000/api/session", {
+
+    method: "POST",
+
+    headers: {
+
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+
+    },
+
+    body: JSON.stringify(payload)
+
+  });
+
+  const data = await res.json();
+
+  console.log("Workout saved:", data);
+
+} catch (err) {
+
+  console.error("Save failed:", err);
+
+}
+
+}, [type]);
+
+/* ================= REP COUNT ================= */
+
+const handleRepsUpdate = useCallback((count) => {
+
+console.log("Reps update received:", count);
+
+poseRepCount.current = count;
+
+if (count >= reps && !savedRef.current) {
+
+  savedRef.current = true;
+
+  console.log("Workout completed → saving session");
+
+  setAiText("Workout Completed 🎉");
+
+  speakText("Workout completed. Great job!");
+
+  setTimeout(() => {
+
+    saveSession(elapsedSeconds);
+
+  }, 500);
+
+}
+
+}, [reps, elapsedSeconds, saveSession]);
+
+/* ================= SPEECH RECOGNITION ================= */
+
+const stopRecognition = useCallback(() => {
+
+shouldListenRef.current = false;
+
+setMicActive(false);
+setIsListening(false);
+
+if (recognitionRef.current) {
+
+  recognitionRef.current.abort();
+  recognitionRef.current = null;
+
+}
+
+}, []);
+
+const startRecognition = useCallback(() => {
+
+const SpeechRecognition =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (!SpeechRecognition) {
+
+  setAiText("Speech recognition not supported");
+  return;
+
+}
+
+const recognition = new SpeechRecognition();
+
+recognition.lang = "en-US";
+
+recognition.onstart = () => setIsListening(true);
+
+recognition.onresult = (event) => {
+
+  const transcript = event.results[0][0].transcript;
+
+  setUserSpeech(transcript);
+
+  if (transcript.toLowerCase().includes("start")) {
+
+    speakText("Starting workout");
+
+  }
+
+  if (transcript.toLowerCase().includes("stop")) {
+
+    speakText("Stopping workout");
+
+  }
+
+};
+
+recognition.onend = () => setIsListening(false);
+
+recognition.start();
+
+recognitionRef.current = recognition;
+
+}, []);
+
+const toggleMic = () => {
+
+if (micActive) {
+
+  stopRecognition();
+
+} else {
+
+  setMicActive(true);
+  shouldListenRef.current = true;
+  startRecognition();
+
+}
+
+};
+
+/* ================= CLEANUP ================= */
+
+useEffect(() => {
+
+return () => {
+
+  stopRecognition();
+  window.speechSynthesis?.cancel();
+
+};
+
+}, []);
+
+/* ================= TIMER ================= */
+
+const handleTimerTick = (secs) => {
+
+setElapsedSeconds(secs);
+
+};
+
+/* ================= SAVE ON PAGE EXIT ================= */
+
+useEffect(() => {
+
+const handleLeaveWorkout = () => {
+
+  const repsDone = poseRepCount.current || completedReps;
+
+  if (repsDone > 0 && !savedRef.current) {
+
+    savedRef.current = true;
+    saveSession(elapsedSeconds);
+
+  }
+
+};
+
+window.addEventListener("beforeunload", handleLeaveWorkout);
+
+return () => {
+
+  handleLeaveWorkout();
+  window.removeEventListener("beforeunload", handleLeaveWorkout);
+
+};
+
+}, [completedReps, elapsedSeconds, saveSession]);
+
+/* ================= VIDEO LOOP ================= */
+
+useEffect(() => {
+
+const video = videoRef.current;
+
+if (!video) return;
+
+video.playbackRate = speed;
+
+const handleEnded = () => {
+
+  if (completedReps + 1 < reps) {
+
+    setCompletedReps(prev => prev + 1);
+    video.currentTime = 0;
+    video.play();
+
+  }
+
+  else {
+
+    setAiText("Workout Completed 🎉");
+    speakText("Workout completed");
+
+    if (!savedRef.current) {
 
       savedRef.current = true;
-
-      setAiText("Workout Completed 🎉");
-
-      speakText("Workout completed. Great job!");
-
       saveSession(elapsedSeconds);
 
     }
 
-  }, [reps, elapsedSeconds]);
+  }
 
-  /* ================= SPEECH RECOGNITION ================= */
+};
 
-  const stopRecognition = useCallback(() => {
+video.addEventListener("ended", handleEnded);
 
-    shouldListenRef.current = false;
+return () => video.removeEventListener("ended", handleEnded);
 
-    setMicActive(false);
-    setIsListening(false);
+}, [reps, speed, completedReps, elapsedSeconds, saveSession]);
 
-    if (recognitionRef.current) {
+/* ================= RESET SESSION ================= */
 
-      recognitionRef.current.abort();
-      recognitionRef.current = null;
+useEffect(() => {
 
-    }
+setCompletedReps(0);
+savedRef.current = false;
 
-  }, []);
+if (videoRef.current)
+  videoRef.current.currentTime = 0;
 
-  const startRecognition = useCallback(() => {
+}, [variationIndex]);
 
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+/* ================= VIDEO SOURCE ================= */
 
-    if (!SpeechRecognition) {
+const videoSrc = exerciseMap[type]
+? `/videos/${type}/${exerciseMap[type][variationIndex].file}`
+: `/videos/${type}.mp4`;
 
-      setAiText("Speech recognition not supported");
+const isPoseExercise = POSE_EXERCISES.has(type);
 
-      return;
+/* ================= UI ================= */
 
-    }
+return (
 
-    const recognition = new SpeechRecognition();
+<div className="workout-wrapper">
 
-    recognition.lang = "en-US";
+  <div className="workout-header">
 
-    recognition.onstart = () => {
-      setIsListening(true);
-    };
+    {type.replaceAll("_", " ").toUpperCase()} SESSION
 
-    recognition.onresult = (event) => {
+  </div>
 
-      const transcript = event.results[0][0].transcript;
+  <div className="workout-grid">
 
-      setUserSpeech(transcript);
+    <div className="camera-section">
 
-      if (transcript.toLowerCase().includes("start")) {
-        speakText("Starting workout");
-      }
+      {isPoseExercise ? (
 
-      if (transcript.toLowerCase().includes("stop")) {
-        speakText("Stopping workout");
-      }
+        <SquatAnalyzer
+          exerciseType={type}
+          onRepsUpdate={handleRepsUpdate}
+          onFeedbackUpdate={handleFeedbackUpdate}
+        />
 
-    };
+      ) : (
 
-    recognition.onend = () => {
-      setIsListening(false);
-    };
+        <SquatAnalyzer exerciseType="squats" />
 
-    recognition.start();
+      )}
 
-    recognitionRef.current = recognition;
+    </div>
 
-  }, []);
+    <div className="video-section">
 
-  const toggleMic = () => {
+      <video
+        ref={videoRef}
+        src={videoSrc}
+        controls
+        className="exercise-video"
+      />
 
-    if (micActive) {
+    </div>
 
-      stopRecognition();
+  </div>
 
-    } else {
+  <div className="controls-panel">
 
-      setMicActive(true);
-      shouldListenRef.current = true;
+    <div className="controls-left">
 
-      startRecognition();
+      <label>
+        Reps
+        <input
+          type="number"
+          min="1"
+          value={reps}
+          onChange={(e) => {
 
-    }
+            setCompletedReps(0);
+            setReps(Number(e.target.value));
 
-  };
+          }}
+        />
+      </label>
 
-  /* ================= CLEANUP ================= */
+      <label>
+        Speed
+        <select
+          value={speed}
+          onChange={(e) => setSpeed(Number(e.target.value))}
+        >
 
-  useEffect(() => {
+          <option value="0.5">0.5x</option>
+          <option value="1">1x</option>
+          <option value="1.5">1.5x</option>
+          <option value="2">2x</option>
 
-    return () => {
+        </select>
+      </label>
 
-      stopRecognition();
+    </div>
 
-      window.speechSynthesis?.cancel();
+    <div className="controls-center">
 
-    };
+      <Timer onTick={handleTimerTick} />
 
-  }, []);
+    </div>
 
-  /* ================= SAVE SESSION ================= */
+    <div className="controls-right">
 
-  const saveSession = useCallback(async (durationSec) => {
+      <button
+        className={`mic-btn ${micActive ? "active" : ""}`}
+        onClick={toggleMic}
+      >
 
-    const token = localStorage.getItem("token");
+        {micActive ? <FaMicrophone /> : <FaMicrophoneSlash />}
 
-    if (!token) return;
+      </button>
 
-    try {
+      <div className="caption-box">
 
-      await fetch("http://localhost:8000/api/session", {
+        {isListening && <div>🎙 Listening...</div>}
 
-        method: "POST",
+        {userSpeech && <div>You: {userSpeech}</div>}
 
-        headers: {
-
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-
-        },
-
-        body: JSON.stringify({
-
-          exercise: type,
-          reps: poseRepCount.current || completedReps,
-          accuracy: 80,
-          duration: durationSec
-
-        })
-
-      });
-
-      console.log("Workout saved");
-
-    } catch (err) {
-
-      console.warn("Session save failed:", err);
-
-    }
-
-  }, [type, completedReps]);
-
-  /* ================= TIMER ================= */
-
-  const handleTimerTick = (secs) => {
-    setElapsedSeconds(secs);
-  };
-
-  /* ================= SAVE ON PAGE EXIT ================= */
-
-  useEffect(() => {
-
-    const handleLeaveWorkout = () => {
-
-      const repsDone = poseRepCount.current || completedReps;
-
-      if (repsDone > 0 && !savedRef.current) {
-
-        savedRef.current = true;
-
-        saveSession(elapsedSeconds);
-
-      }
-
-    };
-
-    window.addEventListener("beforeunload", handleLeaveWorkout);
-
-    return () => {
-
-      handleLeaveWorkout();
-
-      window.removeEventListener("beforeunload", handleLeaveWorkout);
-
-    };
-
-  }, [completedReps, elapsedSeconds, saveSession]);
-
-  /* ================= VIDEO LOOP ================= */
-
-  useEffect(() => {
-
-    const video = videoRef.current;
-
-    if (!video) return;
-
-    video.playbackRate = speed;
-
-    const handleEnded = () => {
-
-      if (completedReps + 1 < reps) {
-
-        setCompletedReps(prev => prev + 1);
-
-        video.currentTime = 0;
-
-        video.play();
-
-      }
-
-      else {
-
-        setAiText("Workout Completed 🎉");
-
-        speakText("Workout completed");
-
-        saveSession(elapsedSeconds);
-
-      }
-
-    };
-
-    video.addEventListener("ended", handleEnded);
-
-    return () => video.removeEventListener("ended", handleEnded);
-
-  }, [reps, speed, completedReps, elapsedSeconds]);
-
-  /* ================= RESET SESSION ================= */
-
-  useEffect(() => {
-
-    setCompletedReps(0);
-
-    savedRef.current = false;
-
-    if (videoRef.current)
-      videoRef.current.currentTime = 0;
-
-  }, [variationIndex]);
-
-  /* ================= VIDEO SOURCE ================= */
-
-  const videoSrc = exerciseMap[type]
-    ? `/videos/${type}/${exerciseMap[type][variationIndex].file}`
-    : `/videos/${type}.mp4`;
-
-  const isPoseExercise = POSE_EXERCISES.has(type);
-
-  /* ================= UI ================= */
-
-  return (
-
-    <div className="workout-wrapper">
-
-      <div className="workout-header">
-        {type.replaceAll("_", " ").toUpperCase()} SESSION
-      </div>
-
-      <div className="workout-grid">
-
-        <div className="camera-section">
-
-          {isPoseExercise ? (
-
-            <SquatAnalyzer
-              exerciseType={type}
-              onRepsUpdate={handleRepsUpdate}
-              onFeedbackUpdate={handleFeedbackUpdate}
-            />
-
-          ) : (
-
-            <SquatAnalyzer exerciseType="squats" />
-
-          )}
-
-        </div>
-
-        <div className="video-section">
-
-          <video
-            ref={videoRef}
-            src={videoSrc}
-            controls
-            className="exercise-video"
-          />
-
-        </div>
-
-      </div>
-
-      <div className="controls-panel">
-
-        <div className="controls-left">
-
-          <label>
-            Reps
-            <input
-              type="number"
-              min="1"
-              value={reps}
-              onChange={(e) => {
-
-                setCompletedReps(0);
-
-                setReps(Number(e.target.value));
-
-              }}
-            />
-          </label>
-
-          <label>
-            Speed
-            <select
-              value={speed}
-              onChange={(e) => setSpeed(Number(e.target.value))}
-            >
-
-              <option value="0.5">0.5x</option>
-              <option value="1">1x</option>
-              <option value="1.5">1.5x</option>
-              <option value="2">2x</option>
-
-            </select>
-          </label>
-
-        </div>
-
-        <div className="controls-center">
-
-          <Timer onTick={handleTimerTick} />
-
-        </div>
-
-        <div className="controls-right">
-
-          <button
-            className={`mic-btn ${micActive ? "active" : ""}`}
-            onClick={toggleMic}
-          >
-
-            {micActive ? <FaMicrophone /> : <FaMicrophoneSlash />}
-
-          </button>
-
-          <div className="caption-box">
-
-            {isListening && <div>🎙 Listening...</div>}
-
-            {userSpeech && <div>You: {userSpeech}</div>}
-
-            <div>{aiText}</div>
-
-          </div>
-
-        </div>
+        <div>{aiText}</div>
 
       </div>
 
     </div>
 
-  );
+  </div>
+
+</div>
+
+);
 
 }
