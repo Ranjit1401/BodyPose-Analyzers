@@ -32,5 +32,6 @@ class WorkoutSession(Base):
     exercise = Column(String, nullable=False)
     reps     = Column(Integer, default=0)
     accuracy = Column(Float, default=0.0)
-    duration = Column(Integer, default=0)  # seconds
+    duration = Column(Integer, default=0)
+    calories = Column(Integer, default=0)   # ✅ ADD THIS
     date     = Column(DateTime, default=datetime.utcnow)

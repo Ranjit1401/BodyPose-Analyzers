@@ -254,7 +254,7 @@ async def analyze_landmarks(
     if reps == 0:
         workout_saved = False
 
-    if reps >= 3:
+    if reps >= 3 and not workout_saved:
 
         calories = int(reps * 0.4)
 
@@ -292,8 +292,10 @@ def save_session(
     db: Session = Depends(get_db),
 ):
 
+    # calories calculation
     calories = int(session.reps * 0.4)
 
+    # create session
     new_session = models.WorkoutSession(
         user_id=current_user.id,
         exercise=session.exercise,
@@ -305,9 +307,11 @@ def save_session(
 
     db.add(new_session)
 
+    # update user stats
     current_user.total_workouts += 1
     current_user.total_calories += calories
 
+    # update average accuracy
     if current_user.total_workouts > 0:
         current_user.avg_accuracy = int(
             (current_user.avg_accuracy * (current_user.total_workouts - 1) + session.accuracy)
@@ -317,7 +321,10 @@ def save_session(
     db.commit()
     db.refresh(new_session)
 
-    return {"message": "Session saved"}
+    return {
+        "message": "Workout session saved successfully",
+        "session_id": new_session.id
+    }
 
 
 @app.get("/api/sessions")
@@ -340,7 +347,8 @@ def get_sessions(
             "reps": s.reps,
             "accuracy": s.accuracy,
             "duration": s.duration,
-            "date": s.date.strftime("%Y-%m-%d %H:%M"),
+            "calories": s.calories,
+            "date": s.date.strftime("%Y-%m-%d %H:%M")
         }
         for s in sessions
     ]
