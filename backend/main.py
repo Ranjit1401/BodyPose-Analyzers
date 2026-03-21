@@ -1,3 +1,5 @@
+from unittest import result
+
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -27,18 +29,18 @@ from dotenv import load_dotenv
 from fastapi import Body
 
 
-# Load environment variables
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 
-# Create database tables
+# prevents multiple saves per workout
+workout_saved = False
+
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# -------------------- CORS --------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -47,7 +49,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -------------------- DB Dependency --------------------
 def get_db():
     db = SessionLocal()
     try:
@@ -55,7 +56,6 @@ def get_db():
     finally:
         db.close()
 
-# -------------------- JWT Auth Setup --------------------
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
@@ -68,15 +68,18 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     user = db.query(models.User).filter(models.User.email == email).first()
+
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
     return user
 
-# -------------------- Register --------------------
+
 @app.post("/register", status_code=status.HTTP_201_CREATED)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+
     existing_user = db.query(models.User).filter(models.User.email == user.email).first()
+
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -92,7 +95,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
     return {"message": "User registered successfully"}
 
-# -------------------- Login --------------------
+
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
 
@@ -103,20 +106,16 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
     today = date.today()
 
-    # 🔥 STREAK LOGIC
     if db_user.last_login_date is None:
         db_user.streak = 1
 
     elif db_user.last_login_date == today:
-        # Already logged in today → do nothing
         pass
 
     elif db_user.last_login_date == today - timedelta(days=1):
-        # Logged in yesterday → increase streak
         db_user.streak += 1
 
     else:
-        # Missed a day → reset streak
         db_user.streak = 1
 
     db_user.last_login_date = today
@@ -130,7 +129,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     }
 
 
-# -------------------- Forgot Password --------------------
 @app.post("/forgot-password")
 async def forgot_password(data: schemas.ForgotPassword, db: Session = Depends(get_db)):
 
@@ -141,7 +139,6 @@ async def forgot_password(data: schemas.ForgotPassword, db: Session = Depends(ge
 
     token = create_reset_token(user.email)
 
-    # 🔥 IMPORTANT: Change port to 5173 for Vite
     reset_link = f"http://localhost:5173/reset-password?token={token}"
 
     message = MessageSchema(
@@ -156,7 +153,7 @@ async def forgot_password(data: schemas.ForgotPassword, db: Session = Depends(ge
 
     return {"message": "Password reset link sent to email"}
 
-# -------------------- Reset Password --------------------
+
 @app.post("/reset-password")
 def reset_password(data: schemas.ResetPassword, db: Session = Depends(get_db)):
 
@@ -167,15 +164,12 @@ def reset_password(data: schemas.ResetPassword, db: Session = Depends(get_db)):
 
     user = db.query(models.User).filter(models.User.email == email).first()
 
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
     user.password = hash_password(data.new_password)
     db.commit()
 
     return {"message": "Password updated successfully"}
 
-# -------------------- Protected Test Route --------------------
+
 @app.get("/me")
 def read_current_user(current_user: models.User = Depends(get_current_user)):
     return {
@@ -184,7 +178,7 @@ def read_current_user(current_user: models.User = Depends(get_current_user)):
         "email": current_user.email
     }
 
-# -------------------- Profile Route --------------------
+
 @app.get("/api/profile")
 def get_profile(current_user: models.User = Depends(get_current_user)):
 
@@ -203,6 +197,8 @@ def get_profile(current_user: models.User = Depends(get_current_user)):
         },
         "progress": []
     }
+
+
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
 
@@ -222,14 +218,21 @@ async def analyze(file: UploadFile = File(...)):
         "analysis": result
     }
 
+
 @app.post("/analyze-landmarks")
-async def analyze_landmarks(data: dict = Body(...)):
+async def analyze_landmarks(
+    data: dict = Body(...),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+
+    global workout_saved
+
     landmarks = data.get("landmarks")
 
     if not landmarks:
         return {"error": "No landmarks received"}
 
-    # Convert frontend landmarks into joints format
     joints = {
         "left_shoulder": (landmarks[11]["x"], landmarks[11]["y"]),
         "right_shoulder": (landmarks[12]["x"], landmarks[12]["y"]),
@@ -242,29 +245,69 @@ async def analyze_landmarks(data: dict = Body(...)):
     }
 
     result = analyze_squat(joints)
+    print("SQUAT RESULT:", result)
+
+    reps = result.get("reps", 0)
+    accuracy = result.get("accuracy", 0)
+    duration = result.get("duration", 0)
+
+    if reps == 0:
+        workout_saved = False
+
+    if reps >= 3:
+
+        calories = int(reps * 0.4)
+
+        new_session = models.WorkoutSession(
+            user_id=current_user.id,
+            exercise="squat",
+            reps=reps,
+            accuracy=accuracy,
+            duration=duration,
+            calories=calories
+        )
+
+        db.add(new_session)
+
+        current_user.total_workouts += 1
+        current_user.total_calories += calories
+
+        if current_user.total_workouts > 0:
+            current_user.avg_accuracy = int(
+                (current_user.avg_accuracy * (current_user.total_workouts - 1) + accuracy)
+                / current_user.total_workouts
+            )
+
+        db.commit()
+
+        workout_saved = True
 
     return {"analysis": result}
 
 
-# -------------------- Save Workout Session --------------------
-@app.post("/api/session", status_code=status.HTTP_201_CREATED)
+@app.post("/api/session")
 def save_session(
     session: schemas.WorkoutSessionCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+
+    calories = int(session.reps * 0.4)
+
     new_session = models.WorkoutSession(
         user_id=current_user.id,
         exercise=session.exercise,
         reps=session.reps,
         accuracy=session.accuracy,
         duration=session.duration,
+        calories=calories
     )
+
     db.add(new_session)
 
-    # Update user stats
     current_user.total_workouts += 1
-    # Running average accuracy
+    current_user.total_calories += calories
+
     if current_user.total_workouts > 0:
         current_user.avg_accuracy = int(
             (current_user.avg_accuracy * (current_user.total_workouts - 1) + session.accuracy)
@@ -274,15 +317,15 @@ def save_session(
     db.commit()
     db.refresh(new_session)
 
-    return {"message": "Session saved", "id": new_session.id}
+    return {"message": "Session saved"}
 
 
-# -------------------- Get Workout History --------------------
 @app.get("/api/sessions")
 def get_sessions(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+
     sessions = (
         db.query(models.WorkoutSession)
         .filter(models.WorkoutSession.user_id == current_user.id)
@@ -292,12 +335,12 @@ def get_sessions(
 
     return [
         {
-            "id":       s.id,
+            "id": s.id,
             "exercise": s.exercise,
-            "reps":     s.reps,
+            "reps": s.reps,
             "accuracy": s.accuracy,
             "duration": s.duration,
-            "date":     s.date.strftime("%Y-%m-%d %H:%M"),
+            "date": s.date.strftime("%Y-%m-%d %H:%M"),
         }
         for s in sessions
     ]
