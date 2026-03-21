@@ -1,0 +1,27 @@
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional
+
+class UserCreate(BaseModel):
+    username: str
+    email: EmailStr
+    password: str = Field(min_length=6, max_length=50)
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class ForgotPassword(BaseModel):
+    email: EmailStr
+
+class ResetPassword(BaseModel):
+    token: str
+    new_password: str
+
+
+# ─── WORKOUT SESSION SCHEMAS ─────────────────────────────────────────────────
+class WorkoutSessionCreate(BaseModel):
+    exercise: str
+    reps:     int    = 0
+    accuracy: float  = 0.0
+    duration: int    = 0   # seconds

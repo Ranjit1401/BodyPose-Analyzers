@@ -1,0 +1,44 @@
+.landing-wrapper {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Aurora background layer */
+.landing-aurora {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+/* Content above aurora */
+.landing-content {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  text-align: center;
+}
+
+.get-started-btn {
+  margin-top: 20px;
+  padding: 12px 28px;
+  border-radius: 30px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: white;
+  border: 1px solid white;
+  transition: all 0.3s ease;
+}
+
+.get-started-btn:hover {
+  background: white;
+  color: black;
+}

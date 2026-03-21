@@ -1,0 +1,335 @@
+/* ============================= */
+/* WORKOUT WRAPPER */
+/* ============================= */
+
+.workout-wrapper {
+  padding: 120px 80px;
+  color: white;
+  min-height: 100vh;
+}
+
+/* ============================= */
+/* HEADER */
+/* ============================= */
+
+.workout-header {
+  font-size: 30px;
+  font-weight: 600;
+  margin-bottom: 40px;
+}
+
+/* ============================= */
+/* GRID */
+/* ============================= */
+
+.workout-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: stretch;
+}
+
+/* ============================= */
+/* CAMERA + VIDEO SECTION BOX */
+/* ============================= */
+
+.camera-section,
+.video-section {
+  background: rgba(20, 10, 40, 0.95);
+  padding: 20px;
+  border-radius: 20px;
+  height: 450px;
+  box-shadow: 0 0 30px rgba(82, 39, 255, 0.25);
+  overflow: hidden;
+}
+
+/* ============================= */
+/* CAMERA LAYOUT (Camera + Stats) */
+/* ============================= */
+
+.camera-section {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+
+  gap: 80px;            /* more spacing */
+  padding: 30px;
+
+  min-height: 450px;    /* allow flexible height */
+  height: auto;         /* remove fixed height */
+}
+
+/* ============================= */
+/* AI CAMERA WRAPPER */
+/* ============================= */
+
+.ai-camera-wrapper {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  flex: 0 0 380px;   /* fixed square area width */
+  position: relative;
+}
+
+/* ============================= */
+/* AI OVERLAY (stats on camera)  */
+/* ============================= */
+
+.ai-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(120, 80, 255, 0.5);
+  border-radius: 12px;
+  padding: 12px 16px;
+  min-width: 160px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #fff;
+  backdrop-filter: blur(6px);
+}
+
+.ai-overlay h3 {
+  font-size: 13px;
+  margin-bottom: 8px;
+  color: #a78bfa;
+}
+
+.ai-overlay p {
+  margin: 2px 0;
+}
+
+
+
+/* ============================= */
+/* CAMERA CANVAS */
+/* ============================= */
+
+.ai-camera-video {
+  width: 450px;
+  height: 400px;
+  object-fit: cover;
+  border-radius: 18px;
+  background: black;
+}
+/* ============================= */
+/* VIDEO ELEMENT */
+/* ============================= */
+
+.exercise-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: black;
+  border-radius: 14px;
+}
+
+/* ============================= */
+/* AI STATS PANEL */
+/* ============================= */
+
+.ai-stats {
+  flex: 1;
+  min-width: 280px;     /* prevent shrinking */
+  max-width: 320px;
+
+  font-size: 14px;
+  line-height: 1.8;
+  color: white;
+
+  background: rgba(0, 0, 0, 0.4);
+  padding: 22px;
+  border-radius: 16px;
+}
+.ai-stats h3 {
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #7a4aff;
+}
+
+.ai-stats p {
+  margin: 6px 0;
+}
+
+
+/* ============================= */
+/* CONTROLS PANEL */
+/* ============================= */
+
+.controls-panel {
+  margin-top: 40px;
+  background: rgba(20, 10, 40, 0.95);
+  padding: 25px;
+  border-radius: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 0 25px rgba(82, 39, 255, 0.25);
+}
+
+/* ============================= */
+/* LEFT CONTROLS */
+/* ============================= */
+
+.controls-left label {
+  margin-right: 25px;
+  font-size: 14px;
+}
+
+.controls-left input,
+.controls-left select {
+  margin-left: 10px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: 1px solid rgba(82, 39, 255, 0.5);
+  border-radius: 10px;
+}
+
+.controls-left input:focus,
+.controls-left select:focus {
+  outline: none;
+  border-color: #39d353;
+}
+
+/* ============================= */
+/* CENTER */
+/* ============================= */
+
+.controls-center {
+  font-size: 18px;
+}
+
+/* ============================= */
+/* RIGHT */
+/* ============================= */
+
+.controls-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* ============================= */
+/* MIC BUTTON */
+/* ============================= */
+
+.mic-btn {
+  background: linear-gradient(135deg, #5227ff, #7a4aff);
+  border: none;
+  padding: 14px;
+  border-radius: 50%;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.mic-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(82, 39, 255, 0.6);
+}
+
+.mic-btn.active {
+  background: linear-gradient(135deg, #39d353, #1db954);
+  box-shadow: 0 0 15px rgba(57, 211, 83, 0.7);
+}
+
+/* ============================= */
+/* CAPTION */
+/* ============================= */
+
+.caption-box {
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(82, 39, 255, 0.4);
+  padding: 10px 15px;
+  border-radius: 12px;
+  min-width: 220px;
+  max-width: 320px;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* User speech → green */
+.speech-user {
+  color: #39d353;
+  font-weight: 600;
+  font-size: 13px;
+  word-break: break-word;
+}
+
+/* AI feedback → red */
+.speech-ai {
+  color: #ff5555;
+  font-weight: 600;
+  font-size: 13px;
+  word-break: break-word;
+}
+
+/* Listening pulse indicator */
+.listening-indicator {
+  color: #7aefff;
+  font-size: 12px;
+  animation: pulse 1s infinite alternate;
+}
+@keyframes pulse {
+  from { opacity: 0.5; }
+  to   { opacity: 1; }
+}
+
+/* Pose feedback overlays */
+.feedback-good {
+  color: #39d353;
+  font-weight: 700;
+  font-size: 15px;
+  margin-top: 6px;
+}
+.feedback-bad {
+  color: #ff5555;
+  font-weight: 700;
+  font-size: 15px;
+  margin-top: 6px;
+}
+
+/* ============================= */
+/* TIMER */
+/* ============================= */
+
+.timer-container {
+  text-align: center;
+}
+
+.timer-display {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+.timer-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.timer-btn {
+  background: linear-gradient(135deg, #5227ff, #7a4aff);
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.timer-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 15px rgba(82, 39, 255, 0.6);
+}
+
+.timer-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
